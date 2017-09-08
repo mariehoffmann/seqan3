@@ -42,8 +42,8 @@
 
 #include <cassert>
 
-#include <sdsl/suffix_trees.hpp>
-#include <sdsl/construct_bwt.hpp>
+#include "sdsl/construct_bwt.hpp"
+#include "sdsl/suffix_trees.hpp"
 
 namespace seqan3
 {

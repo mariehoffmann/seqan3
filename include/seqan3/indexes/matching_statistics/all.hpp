@@ -41,9 +41,9 @@
 #pragma once
 
 #include <seqan3/indexes/matching_statistics/unidirectional_matching_statistics.hpp>
-#include <seqan3/indexes/matching_statistics/bidirectional_matching_statistics.hpp>
-#include <seqan3/indexes/matching_statistics/unidirectional_distinguishing_statistics.hpp>
-#include <seqan3/indexes/matching_statistics/bidirectional_distinguishing_statistics.hpp>
+//#include <seqan3/indexes/matching_statistics/bidirectional_matching_statistics.hpp>
+//#include <seqan3/indexes/matching_statistics/unidirectional_distinguishing_statistics.hpp>
+//#include <seqan3/indexes/matching_statistics/bidirectional_distinguishing_statistics.hpp>
 
 /*!\defgroup matching_statistics Matching Statistics
  * \brief The matching Statistics submodule contains O(n\log|\Sigma|)

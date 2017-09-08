@@ -32,7 +32,10 @@
 //
 // ============================================================================
 
+#include <experimental/filesystem>
+#include <iostream>
 #include <sstream>
+#include <utility>
 #include <vector>
 
 #include <gtest/gtest.h>
@@ -41,8 +44,8 @@
 #include <seqan3/indexes/matching_statistics/all.hpp>
 
 using namespace seqan3;
-
 using container_t = typename std::vector<dna4>;
+namespace fs = std::experimental::filesystem;
 
 class matching_statistics_test_fixture : public ::testing::Test, MS
 {
@@ -59,10 +62,8 @@ protected:
 // default
 TEST(matching_statistics_test_fixture, unidirectional_matching_statistics)
 {
-    // private methods
+    // protected methods
     MS<container_t> ms{s, t};
-
-    ms.construct_bwt();
-
-    // public, remains for pull
+    std::pair<fs::path, fs::path> file_paths = ms.get_output_paths();
+    std::cout << file_paths.first << ", " << file_paths.second << std::endl;
 }

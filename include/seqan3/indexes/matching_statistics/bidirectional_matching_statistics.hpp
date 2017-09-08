@@ -41,9 +41,10 @@
 #pragma once
 
 #include <cassert>
+#include <iostream>
 
-#include <sdsl/suffix_trees.hpp>
-#include <sdsl/construct_bwt.hpp>
+#include "sdsl/construct_bwt.hpp"
+#include "sdsl/suffix_trees.hpp"
 
 namespace seqan3
 {
@@ -109,7 +110,7 @@ public:
          // construct BWT from string s
          construct_bwt();
 
-
+/*
         ms.resize(2*t.size());
         index_t tmp = -1; // MS[-1]
         index_t j = 0;
@@ -123,7 +124,7 @@ public:
                 break;
             }
         }
-
+*/
     }
 }
 
