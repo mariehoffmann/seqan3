@@ -37,7 +37,6 @@
  * \brief Meta-header for the \link matching_statistics matching_statistics submodule \endlink.
  * \author Marie Hoffmann <marie.hoffmann AT fu-berlin.de>
  */
-
 #pragma once
 
 #include <seqan3/indexes/matching_statistics/unidirectional_matching_statistics.hpp>

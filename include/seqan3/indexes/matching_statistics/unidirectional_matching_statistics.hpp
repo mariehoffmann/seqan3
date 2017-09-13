@@ -39,47 +39,63 @@
  */
 
 #pragma once
+//#ifndef __MS_HPP
+//#define __MS_HPP
 
+#include <algorithm>
 #include <cassert>
 #include <experimental/filesystem>
 #include <fstream>
 #include <iostream>
-#include <map>
+#include <sstream>
 #include <sys/types.h>
 #include <type_traits>
 #include <utility>
+#include <vector>
 
-#include "range/v3/utility/iterator_traits.hpp"
+#include <range/v3/utility/iterator_traits.hpp>
+#include <range/v3/view/reverse.hpp>
 
 #include <sdsl/config.hpp> // for cache_config
 #include <sdsl/construct.hpp>
 #include <sdsl/suffix_trees.hpp>
-#include <sdsl/util.hpp>
+//#include <sdsl/util.hpp>
+
+//#include <seqan3/alphabet/concept.hpp>
+#include <seqan3/alphabet/nucleotide/all.hpp>
+//#include <seqan3/range/concept.hpp>
+#include <seqan3/range/view/to_char.hpp>
 
 // Note: in seqan3/sdsl-lite/external cmake CMakeLists.txt has to be executed once to create e.g. needed header file divsufsort.h
 namespace fs = std::experimental::filesystem;
-namespace seqan3
-{
+
+using namespace seqan3;
+using namespace seqan3::literal;
+
+//template <typename alphabet_type>
+//auto const seqan3::view::char_to<alphabet_type>;
 
 // TODO: requires that container's value type fits into a byte! like uint8_t in int_types.hpp
-template <typename container_t>
+template <typename container_t=std::string>
 struct MS
 {
 private:
-    // tmp file directory
-    fs::path tmp_dir{"./tmp"};
-    fs::path full_path_file1{};
-    fs::path full_path_file2{};
+
 
 protected:
     using index_t = signed int; //ranges::v3::size_type_t<container_type>;
     // Algorithm specific value type
     using value_t = unsigned int;
     // Type of container values
-    using data_t = ranges::v3::value_type_t<container_t>;
+    using alphabet_t = ranges::v3::value_type_t<container_t>;
+
+    // Compressed suffix tree type.
+    typedef sdsl::cst_sada<> csts_t;
     //!\brief Sequence for which matching statistics will be computed.
-    container_t s{NULL};
-    container_t t{NULL};
+    typename std::add_pointer_t<container_t> s{nullptr};
+    typename std::add_pointer_t<container_t> t{nullptr};
+    //container_t s{NULL};
+    //container_t t{NULL};
 
     //!\brief Threshold for number of substring occurrences.
     unsigned short int tau{1};
@@ -91,34 +107,67 @@ protected:
     typedef sdsl::cst_sada<> cst_t;
     cst_t cst;
 
+public:
+    // tmp file directory
+    fs::path tmp_dir{"./tmp"};
+    fs::path file1{};
+    fs::path file2{};
+    // TODO: use alphabet vectors and crate strings from them
     // stream input strings to files
+
+    auto get_absolute_path(fs::path filename)
+    {
+        return fs::current_path() / tmp_dir / filename;
+    }
+
+    auto get_output_paths()
+    {
+        return std::make_pair(get_absolute_path(file1), get_absolute_path(file2));
+    }
+
+    auto get_strings()
+    {
+        return std::make_pair(*s, *t);
+    }
+
     void write_files()
     {
-        assert(s.size() > 0 && t.size() > 0);
+        assert(s->size() > 0 && t->size() > 0);
         // create directory if empty
         if (!fs::exists(tmp_dir))
             fs::create_directory(tmp_dir);
         // create temporary files if not existent
-        if (full_path_file1.empty() || !full_path_file1.has_extension())
-            full_path_file1 = tmp_dir / "s.txt";
-        if (full_path_file2.empty() || !full_path_file2.has_extension())
-            full_path_file2 = tmp_dir / "t.txt";
+        if (file1.empty() || !file1.has_extension())
+            file1 = "s.txt";
+        if (file2.empty() || !file2.has_extension())
+            file2 = "t.txt";
+        //auto v = ssss | view::char_to<dna4>;
+        //std::cout << v << std::endl;
         // write cached strings to tmp files
-        std::ofstream(full_path_file1) << std::string(s.begin(), s.end());
-        std::ofstream(full_path_file2) << std::string(t.begin(), t.end());
+        std::ofstream(get_absolute_path(file1)) << *s;
+        std::ofstream(get_absolute_path(file2)) << *t;
     }
 
     //!\brief construct compressed suffix tree of string s according to Sadakane
     void construct_cst()
     {
-        assert(s.size() > 0);
-        sdsl::tMSS filemap = {{sdsl::conf::KEY_TEXT, infile_text1}, {sdsl::conf::KEY_CST, outfile_cst}};
-        sdsl::cache_config config{false, tmp_dir, "", filemap};
+        assert(s->size() > 0);
+
+        csts_t csts;
+        sdsl::construct(csts, file1, 1);
+        auto roots = csts.root();
+        for (auto child: csts.children(roots)) {
+            std::cout << "sada id = " << csts.id(child) << std::endl;
+        }
+
+
+        //sdsl::tMSS filemap = {{sdsl::conf::KEY_TEXT, infile_text1}, {sdsl::conf::KEY_CST, outfile_cst}};
+        //sdsl::cache_config config{false, tmp_dir, "", filemap};
         //template <class t_index>
         //void construct(t_index& idx, const std::string& file, cache_config& config, uint8_t num_bytes, cst_tag;
-        sdsl::construct(/*t_index&*/ idx, /*const std::string&*/ file, /*cache_config&*/ config, /*uint8_t num_bytes*/ 1, sdsl::cst_tag());
+        //sdsl::construct(/*t_index&*/ idx, /*const std::string&*/ file, /*cache_config&*/ config, /*uint8_t num_bytes*/ 1, sdsl::cst_tag());
 
-        sdsl::cst_sada(config);
+        //sdsl::cst_sada(config);
 
     }
 
@@ -126,7 +175,7 @@ protected:
     //!\brief construct Burrows-Wheeler Transform of string s
     void construct_bwt()
     {
-        assert(s.size() > 0);
+        assert(s->size() > 0);
         // bwt needs suffix array (SA) to be in cache. Keys:
         // * conf::KEY_TEXT for t_width=8 or conf::KEY_TEXT_INT for t_width=0
         // * conf::KEY_SA
@@ -141,10 +190,9 @@ protected:
 //        sdsl::construct_bwt<8>(&config);
     }
 
-public:
 
     //!\brief Default constructor.
-    constexpr MS() = default;
+    MS() = default;
 
     //!\brief Copy constructor.
     constexpr MS(MS const &) = default;
@@ -159,10 +207,16 @@ public:
     constexpr MS & operator=(MS &&) = default;
 
     // init with strings and write to file
-    constexpr MS(container_t & _s, container_t & _t, unsigned short int const _tau=1) : s(_s), t(_t)
+    //explicit constexpr random_access_iterator(container_type & host) noexcept : host{&host} {}
+    explicit constexpr MS(container_t & _s, container_t & _t, unsigned short int const _tau=1) noexcept : s{&_s}, t{&_t}
     {
         write_files();
-    };
+    }
+
+    // _filex has to be located in current_abs_dir/tmp_dir/filename, otherwise assertion is thrown
+    constexpr MS(fs::path _file1, fs::path _file2) : file1(_file1), file2(_file2) {
+        assert(fs::exist(get_absolute_path(_file1)) && fs::exist(get_absolute_path(_file1)));
+    }
 
     //!\brief Use default deconstructor.
     ~MS() = default;
@@ -181,11 +235,6 @@ public:
         return select(i) - 2*i;
     }
 
-    std::pair<fs::path, fs::path> get_output_paths()
-    {
-        return std::make_pair<fs::path, fs::path>(full_path_file1, full_path_file2);
-
-    }
      /*
       * Definition "unidirectional matching statistics":
       * Given two strings s and t and a threshold tau > 0,the unidirectional matching
@@ -197,25 +246,28 @@ public:
       void compute()
       {
           // build suffix array
-          construct_sa();
+          construct_cst();
          // construct BWT from string s
     //     construct_bwt();
 
 
-        ms.resize(2*t.size());
+        ms.resize(2*t->size());
         index_t tmp = -1; // MS[-1]
         index_t j = 0;
         // 1st pass: compute consecutive 1s for ms
-        sdsl::bit_vector runs = sdsl::bit_vector(t.size()-1, 0);
-        for (index_t i = 0; i < t.size(); ++i)
+        /*
+        sdsl::bit_vector runs = sdsl::bit_vector(t->size()-1, 0);
+        for (index_t i = 0; i < t->size(); ++i)
         {
 
             if (j >= ms.size()){
                 std::cout << "error, j is exceeding allocated bit_vector size with j = " << j << std::endl;
                 break;
             }
-        }
+        }*/
     }
 };
 
-}  // namespace seqan3
+//#endif
+
+//}  // namespace seqan3
