@@ -47,6 +47,10 @@
 #include <seqan3/indexes/matching_statistics/all.hpp>
 //#include <seqan3/indexes/matching_statistics/unidirectional_matching_statistics.hpp>
 
+#include <sdsl/config.hpp> // for cache_config
+#include <sdsl/construct.hpp>
+#include <sdsl/suffix_trees.hpp>
+
 #include <gtest/gtest.h>
 
 // forward declaration
@@ -67,6 +71,8 @@ protected:
     //container_t s, t;
     std::string s, t;
 
+    typedef sdsl::cst_sada<> cst_t;
+
     virtual void SetUp()
     {
         s = "AACG";     //{dna4::A, dna4::A, dna4::C, dna4::G};
@@ -75,6 +81,7 @@ protected:
     }
 };
 
+/*
 TEST(matching_statistics_test, test1)
 {
     dna4_vector vec{"ACTTTGATA"_dna4};
@@ -115,5 +122,20 @@ TEST_F(matching_statistics_test_fixture, non_default_construction)
     std::cout << "ms5: " << paths_ms5.first << std::endl;
     std::cout << fs::exists(paths_ms5.first) << std::endl;
     EXPECT_TRUE(fs::exists(paths_ms5.first) && fs::exists(paths_ms5.second));
+}
+*/
 
+// unidirectional matching statistics: sdsl compressed suffix tree construction
+TEST_F(matching_statistics_test_fixture, sdsl_cst)
+{
+    MS<std::string> ms(s, t);
+    cst_t cst_s;
+    ms.construct_cst(0, cst_s);
+    auto root = cst_s.root();
+    std::cout << "cst.size = " << cst_s.size() << std::endl;
+    std::cout << "num children of root: " << cst_s.children(root).size() << std::endl;
+    std::cout << "degree root node: " << cst_s.degree(0) << std::endl;
+    //for (auto child: ms.cst.children(root)) {
+    //    std::cout << "sada id = " << ms.cst.id(child) << std::endl;
+    //}
 }
